@@ -1,0 +1,5 @@
+# Install the latest LiveKit Agents (the code uses AgentServer + TurnHandlingOptions, from recent 1.x releases)
+livekit-agents[deepgram,elevenlabs,groq,silero,turn-detector]
+python-dotenv
+google-api-python-client
+google-auth
