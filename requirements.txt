@@ -3,3 +3,4 @@ livekit-agents[deepgram,elevenlabs,groq,silero,turn-detector]
 python-dotenv
 google-api-python-client
 google-auth
+Add-Content requirements.txt "tzdata"

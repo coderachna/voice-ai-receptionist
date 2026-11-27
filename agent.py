@@ -68,7 +68,12 @@ BOOKING FLOW
 3. Ask for their full name, then their phone number. Read the number back digit by digit to confirm.
 4. Confirm everything in one sentence ("So that's Rahul Verma, Tuesday at 11 AM for a checkup, right?").
 5. Only after they say yes, call book_appointment.
-6. Tell them it's booked, ask if there's anything else, and if not, say goodbye and call end_call.
+6. Tell them it's booked and ask if there's anything else.
+
+ENDING THE CALL
+- When the caller says bye, thank you, that's all, nothing else, or similar (in any language, e.g. "bas", "theek hai, dhanyavaad"),
+  say one short goodbye like "Thank you for calling, have a great day!" and then IMMEDIATELY call end_call.
+- Never keep talking after the goodbye. Never ask another question after they said they're done.
 
 RULES
 - Never say an appointment is booked unless book_appointment returned success.
@@ -157,12 +162,19 @@ class Receptionist(Agent):
         return "Message saved. Tell them the team will call back during working hours."
 
     @function_tool()
-    async def end_call(self, context: RunContext) -> str:
-        """Hang up after you have said goodbye."""
-        await context.wait_for_playout()  # let the goodbye finish playing
+    async def end_call(self, context: RunContext) -> None:
+        """End the call. Use it right after your goodbye, when the caller says bye,
+        thanks you and has nothing else, or says they don't need anything more."""
+        await context.wait_for_playout()  # let the goodbye finish playing first
         job = get_job_context()
-        await job.api.room.delete_room(api.DeleteRoomRequest(room=job.room.name))
-        return "Call ended."
+        log.info("caller finished, hanging up")
+        try:
+            # Real calls (browser/phone): closing the room disconnects the caller.
+            await job.api.room.delete_room(api.DeleteRoomRequest(room=job.room.name))
+        except Exception:
+            # Console mode has no real room, so this fails there; that's fine.
+            pass
+        job.shutdown(reason="call ended")
 
 
 def _append_csv(path: str, row: list) -> None:
@@ -173,18 +185,25 @@ def _append_csv(path: str, row: list) -> None:
 server = AgentServer()
 
 
+def build_tts():
+    """Pick the voice provider from .env: TTS_PROVIDER=elevenlabs (default) or deepgram."""
+    if os.getenv("TTS_PROVIDER", "elevenlabs").lower() == "deepgram":
+        # Uses your existing DEEPGRAM_API_KEY; no extra signup needed.
+        return deepgram.TTS(model=os.getenv("DEEPGRAM_TTS_MODEL", "aura-2-thalia-en"))
+    kwargs = {"model": os.getenv("ELEVEN_MODEL", "eleven_flash_v2_5")}
+    if os.getenv("ELEVEN_VOICE_ID"):
+        kwargs["voice_id"] = os.environ["ELEVEN_VOICE_ID"]
+    return elevenlabs.TTS(**kwargs)
+
+
 @server.rtc_session(agent_name="receptionist")
 async def entrypoint(ctx: agents.JobContext):
-    tts_kwargs = {"model": os.getenv("ELEVEN_MODEL", "eleven_flash_v2_5")}
-    if os.getenv("ELEVEN_VOICE_ID"):
-        tts_kwargs["voice_id"] = os.environ["ELEVEN_VOICE_ID"]
-
     session = AgentSession(
         vad=silero.VAD.load(),
         # "multi" handles Hindi-English code-switching; use "en" if callers are English-only.
         stt=deepgram.STT(model="nova-3", language=os.getenv("STT_LANGUAGE", "multi")),
         llm=groq.LLM(model=os.getenv("GROQ_MODEL", "openai/gpt-oss-20b"), temperature=0.3),
-        tts=elevenlabs.TTS(**tts_kwargs),
+        tts=build_tts(),
         turn_handling=TurnHandlingOptions(turn_detection=MultilingualModel()),
     )
 
