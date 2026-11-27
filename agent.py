@@ -196,7 +196,9 @@ def build_tts():
     return elevenlabs.TTS(**kwargs)
 
 
-@server.rtc_session(agent_name="receptionist")
+# Empty name = joins every new room automatically (easiest for browser testing).
+# Set AGENT_NAME=receptionist in .env later for phone calls with explicit dispatch.
+@server.rtc_session(agent_name=os.getenv("AGENT_NAME", ""))
 async def entrypoint(ctx: agents.JobContext):
     session = AgentSession(
         vad=silero.VAD.load(),
