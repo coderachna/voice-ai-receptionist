@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Call Sharma Dental Clinic</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  /* ====== EDIT THESE FOR EACH BUSINESS (also in the CONFIG block in the script) ====== */
+  :root {
+    --bg: #f2f6f4;
+    --surface: #ffffff;
+    --ink: #13312c;
+    --muted: #55706a;
+    --accent: #1f8a70;
+    --accent-soft: #d6eee5;
+    --danger: #b3412c;
+    --ring: rgba(31,138,112,.28);
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0e1c19; --surface: #152824; --ink: #e3f1ec; --muted: #9bb8b0;
+      --accent: #57cfa6; --accent-soft: #1d3a33; --danger: #e47a63;
+      --ring: rgba(87,207,166,.25);
+      color-scheme: dark;
+    }
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--bg); color: var(--ink);
+    font: 17px/1.55 "Atkinson Hyperlegible", system-ui, sans-serif;
+    padding: env(safe-area-inset-top,0) 20px env(safe-area-inset-bottom,0);
+    display: flex; justify-content: center;
+  }
+  main { width: 100%; max-width: 440px; display: flex; flex-direction: column; align-items: center; padding: 48px 0 32px; }
+  h1 {
+    font-family: "Bricolage Grotesque", "Atkinson Hyperlegible", sans-serif;
+    font-weight: 700; font-size: clamp(30px, 8vw, 40px); line-height: 1.1;
+    letter-spacing: -0.02em; text-align: center; margin: 0 0 8px;
+  }
+  .hours { color: var(--muted); text-align: center; margin: 0 0 40px; font-size: 15px; }
+
+  .dial { position: relative; width: 168px; height: 168px; margin-bottom: 20px; }
+  .dial .pulse {
+    position: absolute; inset: 0; border-radius: 50%; background: var(--ring);
+    transform: scale(1); transition: transform 90ms linear; pointer-events: none;
+  }
+  .dial button {
+    position: absolute; inset: 14px; border-radius: 50%; border: 0; cursor: pointer;
+    background: var(--accent); color: #fff;
+    font: 700 19px/1.2 "Bricolage Grotesque", sans-serif;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+    box-shadow: 0 10px 30px -12px var(--accent);
+  }
+  .dial button svg { width: 34px; height: 34px; }
+  .dial button:focus-visible { outline: 3px solid var(--ink); outline-offset: 4px; }
+  .dial button.end { background: var(--danger); box-shadow: 0 10px 30px -12px var(--danger); }
+  .dial button:disabled { opacity: .7; cursor: progress; }
+
+  .status { min-height: 1.6em; text-align: center; font-weight: 700; margin: 0 0 28px; }
+  .status.error { color: var(--danger); }
+
+  .transcript { width: 100%; display: flex; flex-direction: column; gap: 10px; }
+  .msg { max-width: 85%; padding: 10px 14px; border-radius: 18px; background: var(--surface); }
+  .msg.riya { align-self: flex-start; border-bottom-left-radius: 6px; }
+  .msg.you { align-self: flex-end; background: var(--accent-soft); border-bottom-right-radius: 6px; }
+  .msg .who { display: block; font-size: 13px; color: var(--muted); margin-bottom: 2px; }
+
+  .note { margin-top: auto; padding-top: 40px; color: var(--muted); font-size: 13px; text-align: center; }
+  @media (prefers-reduced-motion: reduce) { .dial .pulse { transition: none; } }
+</style>
+</head>
+<body>
+<main>
+  <h1 id="title">Sharma Dental Clinic</h1>
+  <p class="hours" id="hours">Mon–Sat, 10 am to 7 pm · Sector 62, Noida</p>
+
+  <div class="dial">
+    <div class="pulse" id="pulse"></div>
+    <button id="callBtn" type="button" aria-describedby="status">
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.25 11.4 11.4 0 0 0 3.6.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.6a1 1 0 0 1-.25 1z"/></svg>
+      <span id="btnLabel">Call Riya</span>
+    </button>
+  </div>
+
+  <p class="status" id="status" role="status" aria-live="polite">Book an appointment by talking to our receptionist.</p>
+  <div class="transcript" id="transcript" aria-live="polite"></div>
+
+  <p class="note">Riya is an AI receptionist. Your microphone is used only during the call.</p>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/livekit-client@2.24.0/dist/livekit-client.umd.js"></script>
+<script>
+// ====== CONFIG: paste your LiveKit "Development token server" ID here ======
+const CONFIG = {
+  TOKEN_SERVER_ID: "aireceptionist-18xq7g",
+  AGENT_NAME: "",            // leave empty (your agent joins every call automatically)
+};
+
+const LK = window.LivekitClient;
+const $ = (id) => document.getElementById(id);
+const btn = $("callBtn"), label = $("btnLabel"), statusEl = $("status"), pulse = $("pulse"), transcript = $("transcript");
+
+let room = null, levelTimer = null;
+const bubbles = new Map();   // segment id -> element
+
+function setStatus(text, isError = false) {
+  statusEl.textContent = text;
+  statusEl.classList.toggle("error", isError);
+}
+function setButton(mode) {   // "call" | "connecting" | "end"
+  btn.disabled = mode === "connecting";
+  btn.classList.toggle("end", mode === "end");
+  label.textContent = mode === "end" ? "End call" : mode === "connecting" ? "Connecting…" : "Call Riya";
+}
+
+function upsertBubble(id, who, text) {
+  let el = bubbles.get(id);
+  if (!el) {
+    el = document.createElement("div");
+    el.className = "msg " + (who === "Riya" ? "riya" : "you");
+    el.innerHTML = '<span class="who"></span><span class="text"></span>';
+    el.querySelector(".who").textContent = who;
+    transcript.appendChild(el);
+    bubbles.set(id, el);
+  }
+  el.querySelector(".text").textContent = text;
+  el.scrollIntoView({ block: "end", behavior: "smooth" });
+}
+
+function startLevelMeter() {
+  levelTimer = setInterval(() => {
+    let level = 0;
+    if (room) for (const p of room.remoteParticipants.values()) level = Math.max(level, p.audioLevel || 0);
+    pulse.style.transform = `scale(${1 + Math.min(level * 1.6, 0.35)})`;
+  }, 90);
+}
+function stopLevelMeter() { clearInterval(levelTimer); pulse.style.transform = "scale(1)"; }
+
+async function startCall() {
+  if (CONFIG.TOKEN_SERVER_ID.startsWith("PASTE")) {
+    setStatus("Setup needed: add your token server ID in the CONFIG block of index.html.", true);
+    return;
+  }
+  setButton("connecting");
+  setStatus("Connecting…");
+  transcript.innerHTML = ""; bubbles.clear();
+
+  try {
+    const source = LK.TokenSource.developmentTokenServer(CONFIG.TOKEN_SERVER_ID);
+    const opts = { roomName: "web-" + Math.random().toString(36).slice(2, 10), participantName: "Caller" };
+    if (CONFIG.AGENT_NAME) opts.agentName = CONFIG.AGENT_NAME;
+    const { serverUrl, participantToken } = await source.fetch(opts);
+
+    room = new LK.Room({ adaptiveStream: true });
+
+    room.on(LK.RoomEvent.TrackSubscribed, (track) => {
+      if (track.kind === "audio") { const el = track.attach(); el.style.display = "none"; document.body.appendChild(el); }
+    });
+    room.on(LK.RoomEvent.ParticipantConnected, () => setStatus("Riya is on the line. Go ahead and speak."));
+    room.on(LK.RoomEvent.Disconnected, () => endCall(true));
+
+    try {
+      room.registerTextStreamHandler("lk.transcription", async (reader, participantInfo) => {
+        const attrs = reader.info.attributes || {};
+        const segId = attrs["lk.segment_id"] || reader.info.id;
+        const micSid = [...room.localParticipant.audioTrackPublications.values()][0]?.trackSid;
+        const isCaller = participantInfo.identity === room.localParticipant.identity ||
+                         (micSid && attrs["lk.transcribed_track_id"] === micSid);
+        let text = "";
+        for await (const chunk of reader) { text += chunk; upsertBubble(segId, isCaller ? "You" : "Riya", text); }
+      });
+    } catch (e) { console.warn("Live transcript not available", e); }
+
+    await room.connect(serverUrl, participantToken);
+    await room.localParticipant.setMicrophoneEnabled(true);
+    await room.startAudio();
+
+    setButton("end");
+    setStatus(room.remoteParticipants.size ? "Riya is on the line. Go ahead and speak." : "Ringing… waiting for Riya to pick up.");
+    startLevelMeter();
+
+    // If nobody answers in 15 seconds, the agent is probably not running.
+    setTimeout(() => {
+      if (room && room.remoteParticipants.size === 0)
+        setStatus("Riya isn't answering. The receptionist service may be offline right now.", true);
+    }, 15000);
+  } catch (err) {
+    console.error(err);
+    const msg = /permission|NotAllowed/i.test(String(err))
+      ? "Microphone access was blocked. Allow the microphone in your browser and try again."
+      : "Couldn't connect the call. Check your internet connection and try again.";
+    setStatus(msg, true);
+    await endCall(false);
+    setStatus(msg, true);
+  }
+}
+
+async function endCall(byRemote) {
+  stopLevelMeter();
+  const r = room; room = null;
+  if (r) { try { await r.disconnect(); } catch {} }
+  document.querySelectorAll("audio").forEach((a) => a.remove());
+  setButton("call");
+  if (byRemote) setStatus("Call ended. Thanks for calling!");
+}
+
+btn.addEventListener("click", () => (room ? endCall(false).then(() => setStatus("Call ended.")) : startCall()));
+</script>
+</body>
+</html>
