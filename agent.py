@@ -32,6 +32,10 @@ import calendar_service as cal
 
 log = logging.getLogger("receptionist")
 
+# How many recent conversation items the LLM sees each turn. Long calls stay fast
+# because old chatter isn't resent every time. ~20 covers a full booking comfortably.
+MAX_HISTORY_ITEMS = int(os.getenv("MAX_HISTORY_ITEMS", "20"))
+
 # ---- Edit this for each business. The agent answers FAQs ONLY from here. ----
 BUSINESS = {
     "name": os.getenv("BUSINESS_NAME", "Sharma Dental Clinic"),
@@ -90,6 +94,14 @@ def _spoken_time(t: dt.datetime) -> str:
 class Receptionist(Agent):
     def __init__(self) -> None:
         super().__init__(instructions=build_instructions())
+
+    async def llm_node(self, chat_ctx, tools, model_settings):
+        """Send only the recent part of the conversation to the LLM.
+        The full history is still kept; this just trims what each request carries."""
+        trimmed = chat_ctx.copy()
+        trimmed.truncate(max_items=MAX_HISTORY_ITEMS)
+        async for chunk in Agent.default.llm_node(self, trimmed, tools, model_settings):
+            yield chunk
 
     @function_tool()
     async def check_availability(self, context: RunContext, date: str) -> str:
@@ -185,6 +197,15 @@ def _append_csv(path: str, row: list) -> None:
 server = AgentServer()
 
 
+def build_llm():
+    model = os.getenv("GROQ_MODEL", "openai/gpt-oss-20b")
+    kwargs = {"model": model, "temperature": 0.3}
+    # gpt-oss / qwen "think" before answering; on a phone call we want minimal thinking.
+    if model.startswith(("openai/gpt-oss", "qwen")):
+        kwargs["reasoning_effort"] = os.getenv("GROQ_REASONING_EFFORT", "low")
+    return groq.LLM(**kwargs)
+
+
 def build_tts():
     """Pick the voice provider from .env: TTS_PROVIDER=elevenlabs (default) or deepgram."""
     if os.getenv("TTS_PROVIDER", "elevenlabs").lower() == "deepgram":
@@ -204,7 +225,7 @@ async def entrypoint(ctx: agents.JobContext):
         vad=silero.VAD.load(),
         # "multi" handles Hindi-English code-switching; use "en" if callers are English-only.
         stt=deepgram.STT(model="nova-3", language=os.getenv("STT_LANGUAGE", "multi")),
-        llm=groq.LLM(model=os.getenv("GROQ_MODEL", "openai/gpt-oss-20b"), temperature=0.3),
+        llm=build_llm(),
         tts=build_tts(),
         turn_handling=TurnHandlingOptions(turn_detection=MultilingualModel()),
     )
